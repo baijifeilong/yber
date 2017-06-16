@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/bj-wiber.iml" filepath="$PROJECT_DIR$/bj-wiber.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bj-wiber_main.iml" filepath="$PROJECT_DIR$/.idea/modules/bj-wiber_main.iml" group="bj-wiber" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/bj-wiber_test.iml" filepath="$PROJECT_DIR$/.idea/modules/bj-wiber_test.iml" group="bj-wiber" />
+    </modules>
+  </component>
+</project>
