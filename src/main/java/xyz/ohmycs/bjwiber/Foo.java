@@ -7,4 +7,5 @@ public class Foo {
     public static void greet() {
         System.out.println("I am foo");
     }
+
 }
