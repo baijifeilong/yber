@@ -1,24 +1,21 @@
 package xyz.ohmycs.bjwiber
 
+import com.sun.deploy.net.HttpRequest
 import javafx.application.Application
-import javafx.beans.property.ReadOnlyObjectWrapper
-import javafx.beans.property.ReadOnlyStringWrapper
+import javafx.beans.binding.Binding
+import javafx.beans.binding.Bindings
+import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
-import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.concurrent.Worker
-import javafx.scene.Parent
-import javafx.scene.control.TableView
-import javafx.scene.control.TextArea
+import javafx.scene.control.ComboBox
+import javafx.scene.control.Label
+import javafx.scene.control.ListView
 import javafx.scene.control.TextField
-import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
-import javafx.scene.text.Text
-import javafx.scene.web.WebEngine
 import javafx.scene.web.WebView
 import netscape.javascript.JSObject
-import org.fxmisc.richtext.CodeArea
-import sun.security.util.PendingException
+import okhttp3.*
 import tornadofx.*
 import javax.json.JsonArray
 import javax.json.JsonObject
@@ -33,6 +30,23 @@ class User : JsonModel {
             id = int("id")
             nickname = string("nickname")
         }
+    }
+}
+
+
+class Argument(key: String? = null, value: String? = null, enabled: Boolean = true, position: String = "url") {
+    val keyProperty = SimpleStringProperty(this, "key", key)
+    val valueProperty = SimpleStringProperty(this, "value", value)
+    val enabledProperty = SimpleBooleanProperty(this, "enabled", enabled)
+    val positionProperty = SimpleStringProperty(this, "position", position)
+
+    var key by keyProperty
+    var value by valueProperty
+    var enabled by enabledProperty
+    var position by positionProperty
+
+    override fun toString(): String {
+        return "Argument {key:$key, value:$value, enabled:$enabled, position:$position}"
     }
 }
 
@@ -52,9 +66,32 @@ class MainController : Controller() {
 
 class MainView : View() {
     val mainController: MainController by inject()
-    var urlField: TextField? by singleAssign()
-    var resultField: TextArea? by singleAssign()
+    var urlFirstField: TextField? by singleAssign()
+    var urlSecondField: TextField? by singleAssign()
+    var methodComboBox: ComboBox<String>? by singleAssign()
     var webView: WebView? by singleAssign()
+    var statusLabel: Label? by singleAssign()
+    val arguments = mutableListOf(Argument()).observable()
+    var argumentsListView: ListView<Argument> by singleAssign()
+    var client: OkHttpClient? by singleAssign()
+
+    init {
+        client = OkHttpClient.Builder()
+                .addInterceptor { chain ->
+                    val request = chain.request()
+                    val body: RequestBody? = request.body()
+                    print("Request: ${request} ")
+                    if (body is FormBody) {
+                        print("Body: " + (0 until body.size()).map { "${body.name(it)}=${body.value(it)}" }.joinToString(","))
+                    } else {
+                        print("Body: " + body)
+                    }
+                    println()
+                    val response = chain.proceed(request)
+                    println("Response: ${response}")
+                    return@addInterceptor response
+                }.build()
+    }
 
     fun renderCode(code: String) {
         val window = webView!!.engine.executeScript("window") as JSObject
@@ -64,19 +101,39 @@ class MainView : View() {
     override val root = borderpane {
         top = hbox {
             spacing = 3.0
-            this@MainView.urlField = textfield("http://www.baidu.com") { hgrow = Priority.ALWAYS }
-            combobox<String> {
+            urlFirstField = textfield("http://127.0.0.1:22222/v3") { hgrow = Priority.ALWAYS }
+            urlSecondField = textfield("/") { hgrow = Priority.ALWAYS }
+            methodComboBox = combobox<String> {
                 items = listOf("get", "post", "patch", "delete", "put", "option").observable()
                 value = "post"
             }
             button("send") {
                 action {
                     runAsync {
-                        mainController.api.get(this@MainView.urlField!!.text)
+                        val availableArguments = arguments.filter { it.key != null && it.value != null && it.enabled }
+                        val urlArguments = availableArguments.filter { it.position == "url" }
+                        val url = HttpUrl.parse(urlFirstField!!.text + urlSecondField!!.text)!!.newBuilder().apply {
+                            urlArguments.forEach {
+                                this.addQueryParameter(it.key, it.value)
+                            }
+                        }.build()
+                        val headerArguments = availableArguments.filter { it.position == "header" }
+                        val bodyArguments = availableArguments.filter { it.position == "body" }
+                        val jsonArguments = availableArguments.filter { it.position == "json" }
+                        println("Request: $url")
+                        val api = mainController.api
+                        client!!.newCall(Request.Builder().url(url).apply {
+                            when (methodComboBox!!.selectedItem!!) {
+                                "get" -> this.get()
+                                "post" -> this.post(FormBody.Builder().apply {
+                                    bodyArguments.forEach {
+                                        this.add(it.key, it.value)
+                                    }
+                                }.build())
+                            }
+                        }.build()).execute()
                     } ui {
-                        this@MainView.resultField!!.appendText(it.text())
-                        println("Code = " + it.text())
-                        renderCode(it.text()!!)
+                        renderCode(it.body()!!.string())
                     }
                 }
             }
@@ -84,25 +141,60 @@ class MainView : View() {
                 action {
                     val code = "from datetime import datetime\nprint 'xx'"
                     renderCode(code)
+                    statusLabel!!.text = arguments.toString()
+                }
+            }
+            button("toggle") {
+                action {
+                    argumentsListView.isVisible = !argumentsListView.isVisible
                 }
             }
         }
 
 
         center = vbox {
-            squeezebox {
-                fold("Arguments") {
-                    listview(mutableListOf("Foo", "Bar", "Baz").observable())
-                }
-                fold("Result", expanded = true) {
-                    this@MainView.resultField = textarea()
+            argumentsListView = listview(arguments) {
+                managedProperty().bind(this.visibleProperty())
+                prefHeightProperty().bind(Bindings.size(items).multiply(63).add(30))
+                cellFormat {
+                    graphic = if (it == arguments.last())
+                        button("New") {
+                            action {
+                                arguments.add(Argument())
+                            }
+                        }
+                    else hbox {
+                        spacing = 3.0
+                        textfield {
+                            hgrow = Priority.ALWAYS
+                            bind(it.keyProperty)
+                        }
+                        textfield {
+                            hgrow = Priority.ALWAYS
+                            bind(it.valueProperty)
+                        }
+                        combobox<String> {
+                            items = listOf("header", "url", "body", "json").observable()
+                            bind(it.positionProperty)
+                        }
+                        togglebutton {
+                            selectedProperty().bindBidirectional(it.enabledProperty)
+                            textProperty().bind(selectedProperty().stringBinding { if (it == true) "Enabled" else "Disabled" })
+                        }
+
+                        button("Delete") {
+                            action {
+                                arguments.remove(it)
+                            }
+                        }
+                    }
                 }
             }
             webView = webview {
-                val url = MainView::class.java.getResource("/index.html").toExternalForm()
+                vgrow = Priority.ALWAYS
                 engine.setOnAlert { println("Alert: $it") }
                 engine.loadWorker.stateProperty().addListener { _, _, newValue ->
-                    println("New value: $newValue)}");
+                    println("New value: $newValue");
                     if (newValue == Worker.State.SUCCEEDED) {
                         println("Finished loading");
 
@@ -112,11 +204,13 @@ class MainView : View() {
                         engine.executeScript("console.log('xxx')")
                     }
                 }
+                val url = MainView::class.java.getResource("/index.html").toExternalForm()
                 engine.load(url)
-
             }
         }
 
+        statusLabel = label("Ready.")
+        bottom = statusLabel
     }
 }
 
@@ -127,7 +221,10 @@ class JavaBridge {
 }
 
 
-class App : tornadofx.App(MainView::class)
+class App : tornadofx.App(MainView::class) {
+    init {
+    }
+}
 
 fun main(args: Array<String>) {
     Application.launch(App::class.java, *args)

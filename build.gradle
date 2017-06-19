@@ -43,7 +43,7 @@ dependencies {
     // This dependency is found on compile classpath of this component and consumers.
     compile 'com.google.guava:guava:21.0'
     compile 'no.tornado:tornadofx:1.7.7'
-    compile 'org.fxmisc.richtext:richtextfx:0.6.10'
+    compile 'com.squareup.okhttp3:okhttp:3.8.1'
 
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'

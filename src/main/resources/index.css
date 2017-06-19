@@ -1,8 +1,13 @@
+html, body, pre {
+    margin: 0;
+    padding: 0;
+}
+
 #div2 {
     background: red;
 }
 
 code {
-    font-family: monospace;
+    font-family: consolas, monospace;
     font-size: 20pt;
 }
