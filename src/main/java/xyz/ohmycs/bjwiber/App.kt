@@ -1,18 +1,13 @@
 package xyz.ohmycs.bjwiber
 
-import com.sun.deploy.net.HttpRequest
 import javafx.application.Application
-import javafx.beans.binding.Binding
 import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.ObservableList
 import javafx.concurrent.Worker
 import javafx.geometry.Insets
-import javafx.scene.control.ComboBox
-import javafx.scene.control.Label
-import javafx.scene.control.ListView
-import javafx.scene.control.TextField
+import javafx.scene.control.*
 import javafx.scene.layout.*
 import javafx.scene.paint.Color
 import javafx.scene.web.WebView
@@ -85,6 +80,7 @@ class MainView : View() {
     var argumentsListView: ListView<Argument> by singleAssign()
     var bodyTypeComboBox: ComboBox<String>? by singleAssign()
     var client: OkHttpClient? by singleAssign()
+    var toggleArgumentsVisibleButton: Button? by singleAssign()
 
     init {
         client = OkHttpClient.Builder().addInterceptor { chain ->
@@ -126,8 +122,7 @@ class MainView : View() {
                     statusLabel!!.text = arguments.toString()
                 }
             }
-            button {
-                graphic = Glyph.create("FontAwesome|" + FontAwesome.Glyph.TOGGLE_DOWN).color(Color.DEEPSKYBLUE)
+            toggleArgumentsVisibleButton = button {
                 action {
                     argumentsListView.isVisible = !argumentsListView.isVisible
                 }
@@ -193,6 +188,9 @@ class MainView : View() {
         center = vbox {
             argumentsListView = listview(arguments) {
                 managedProperty().bind(this.visibleProperty())
+                toggleArgumentsVisibleButton!!.graphicProperty().bind(Bindings.`when`(this.visibleProperty())
+                        .then(Glyph.create("FontAwesome|" + FontAwesome.Glyph.TOGGLE_UP).color(Color.DEEPSKYBLUE))
+                        .otherwise(Glyph.create("FontAwesome|" + FontAwesome.Glyph.TOGGLE_DOWN).color(Color.DEEPSKYBLUE)))
                 prefHeightProperty().bind(Bindings.size(items).multiply(50))
                 cellFormat {
                     val currentArgument = it
