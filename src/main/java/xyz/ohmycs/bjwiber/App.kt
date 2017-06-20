@@ -13,6 +13,7 @@ import javafx.scene.paint.Color
 import javafx.scene.web.WebView
 import netscape.javascript.JSObject
 import okhttp3.*
+import org.controlsfx.control.StatusBar
 import org.controlsfx.glyphfont.FontAwesome
 import org.controlsfx.glyphfont.Glyph
 import tornadofx.*
@@ -71,7 +72,7 @@ class MainView : View() {
     var urlSecondField: TextField? by singleAssign()
     var methodComboBox: ComboBox<String>? by singleAssign()
     var webView: WebView? by singleAssign()
-    var statusLabel: Label? by singleAssign()
+    var statusBar: StatusBar? by singleAssign()
     val arguments = mutableListOf(
             Argument(key = "header", value = "HEADER", position = "header"),
             Argument(key = "url", value = "URL", position = "url"),
@@ -86,15 +87,22 @@ class MainView : View() {
         client = OkHttpClient.Builder().addInterceptor { chain ->
             val request = chain.request()
             val body: RequestBody? = request.body()
-            print("Request: ${request} ")
+            var requestLog = "Request: ${request} "
             if (body is FormBody) {
-                print("Body: " + (0 until body.size()).map { "${body.name(it)}=${body.value(it)}" }.joinToString(","))
+                requestLog += "Body: " + (0 until body.size()).map { "${body.name(it)}=${body.value(it)}" }.joinToString(",")
             } else {
-                print("Body: " + body)
+                requestLog += "Body: " + body
             }
-            println()
+            println(requestLog)
+            runLater {
+                statusBar!!.text = requestLog
+            }
             val response = chain.proceed(request)
-            println("Response: ${response}")
+            val responseLog = "Response: ${response}"
+            println(responseLog)
+            runLater {
+                statusBar!!.text = responseLog
+            }
             return@addInterceptor response
         }.build()
     }
@@ -119,7 +127,7 @@ class MainView : View() {
                 action {
                     val code = "from datetime import datetime\nprint 'xx'"
                     renderCode(code)
-                    statusLabel!!.text = arguments.toString()
+                    statusBar!!.text = arguments.toString()
                 }
             }
             toggleArgumentsVisibleButton = button {
@@ -257,8 +265,10 @@ class MainView : View() {
             }
         }
 
-        statusLabel = label("Ready.")
-        bottom = statusLabel
+        bottom = StatusBar().apply {
+            text = "Ready."
+        }
+        statusBar = bottom as StatusBar
     }
 }
 
