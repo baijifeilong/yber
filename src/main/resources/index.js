@@ -14,4 +14,5 @@ function renderCode(code) {
     const container = document.getElementById("container");
     container.innerText = code;
     hljs.highlightBlock(container);
+    hljs.lineNumbersBlock(container);
 }

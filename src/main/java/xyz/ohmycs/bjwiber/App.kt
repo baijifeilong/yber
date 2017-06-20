@@ -8,15 +8,23 @@ import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.ObservableList
 import javafx.concurrent.Worker
+import javafx.geometry.Insets
 import javafx.scene.control.ComboBox
 import javafx.scene.control.Label
 import javafx.scene.control.ListView
 import javafx.scene.control.TextField
+import javafx.scene.layout.Background
+import javafx.scene.layout.HBox
 import javafx.scene.layout.Priority
+import javafx.scene.paint.Color
 import javafx.scene.web.WebView
 import netscape.javascript.JSObject
 import okhttp3.*
+import org.controlsfx.glyphfont.FontAwesome
+import org.controlsfx.glyphfont.Glyph
 import tornadofx.*
+import java.io.StringReader
+import javax.json.Json
 import javax.json.JsonArray
 import javax.json.JsonObject
 
@@ -71,7 +79,7 @@ class MainView : View() {
     var methodComboBox: ComboBox<String>? by singleAssign()
     var webView: WebView? by singleAssign()
     var statusLabel: Label? by singleAssign()
-    val arguments = mutableListOf(Argument()).observable()
+    val arguments = (0 until 4).toMutableList().map { Argument() }.observable()
     var argumentsListView: ListView<Argument> by singleAssign()
     var client: OkHttpClient? by singleAssign()
 
@@ -100,14 +108,40 @@ class MainView : View() {
 
     override val root = borderpane {
         top = hbox {
+            padding = Insets(5.0)
             spacing = 3.0
-            urlFirstField = textfield("http://127.0.0.1:22222/v3") { hgrow = Priority.ALWAYS }
-            urlSecondField = textfield("/") { hgrow = Priority.ALWAYS }
+            button {
+                graphic = Glyph.create("FontAwesome|" + FontAwesome.Glyph.PLUS).color(Color.FORESTGREEN)
+                action {
+                    arguments.add(Argument())
+                }
+            }
+            button {
+                graphic = Glyph.create("FontAwesome|" + FontAwesome.Glyph.AMBULANCE).color(Color.RED)
+                action {
+                    val code = "from datetime import datetime\nprint 'xx'"
+                    renderCode(code)
+                    statusLabel!!.text = arguments.toString()
+                }
+            }
+            button {
+                graphic = Glyph.create("FontAwesome|" + FontAwesome.Glyph.TOGGLE_DOWN).color(Color.DEEPSKYBLUE)
+                action {
+                    argumentsListView.isVisible = !argumentsListView.isVisible
+                }
+            }
             methodComboBox = combobox<String> {
                 items = listOf("get", "post", "patch", "delete", "put", "option").observable()
                 value = "post"
             }
-            button("send") {
+            urlFirstField = textfield("http://127.0.0.1:22222/v3") { hgrow = Priority.ALWAYS }
+            urlSecondField = textfield("/") { hgrow = Priority.ALWAYS }
+            combobox<String> {
+                items = listOf("form", "multipart", "json").observable()
+                value = "form"
+            }
+            button {
+                graphic = Glyph.create("FontAwesome|" + FontAwesome.Glyph.SEND).color(Color.BLUEVIOLET)
                 action {
                     runAsync {
                         val availableArguments = arguments.filter { it.key != null && it.value != null && it.enabled }
@@ -133,20 +167,14 @@ class MainView : View() {
                             }
                         }.build()).execute()
                     } ui {
-                        renderCode(it.body()!!.string())
+                        if (it.body()?.contentType()?.subtype() == "json") {
+
+                            val txt = it.body()?.string()
+                            val code = Json.createReader(StringReader(txt)).read().toPrettyString()
+                            renderCode(code)
+                        } else
+                            renderCode(it.body()!!.string())
                     }
-                }
-            }
-            button("two") {
-                action {
-                    val code = "from datetime import datetime\nprint 'xx'"
-                    renderCode(code)
-                    statusLabel!!.text = arguments.toString()
-                }
-            }
-            button("toggle") {
-                action {
-                    argumentsListView.isVisible = !argumentsListView.isVisible
                 }
             }
         }
@@ -155,34 +183,32 @@ class MainView : View() {
         center = vbox {
             argumentsListView = listview(arguments) {
                 managedProperty().bind(this.visibleProperty())
-                prefHeightProperty().bind(Bindings.size(items).multiply(63).add(30))
+                prefHeightProperty().bind(Bindings.size(items).multiply(50))
                 cellFormat {
-                    graphic = if (it == arguments.last())
-                        button("New") {
-                            action {
-                                arguments.add(Argument())
-                            }
-                        }
-                    else hbox {
+                    graphic = hbox {
                         spacing = 3.0
-                        textfield {
-                            hgrow = Priority.ALWAYS
+                        combobox<String> {
+                            items = listOf("header", "url", "body").observable()
+                            bind(it.positionProperty)
+                        }
+                        val a = textfield {
+                            hgrow = Priority.SOMETIMES
                             bind(it.keyProperty)
                         }
                         textfield {
                             hgrow = Priority.ALWAYS
                             bind(it.valueProperty)
                         }
-                        combobox<String> {
-                            items = listOf("header", "url", "body", "json").observable()
-                            bind(it.positionProperty)
-                        }
                         togglebutton {
                             selectedProperty().bindBidirectional(it.enabledProperty)
                             textProperty().bind(selectedProperty().stringBinding { if (it == true) "Enabled" else "Disabled" })
+                            action {
+                                println(it)
+                                a.isDisable = true
+                            }
                         }
 
-                        button("Delete") {
+                        button(graphic = Glyph.create("FontAwesome|" + FontAwesome.Glyph.REMOVE).color(Color.ORANGERED)) {
                             action {
                                 arguments.remove(it)
                             }

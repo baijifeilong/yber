@@ -44,6 +44,7 @@ dependencies {
     compile 'com.google.guava:guava:21.0'
     compile 'no.tornado:tornadofx:1.7.7'
     compile 'com.squareup.okhttp3:okhttp:3.8.1'
+    compile 'org.controlsfx:controlsfx:8.40.12'
 
     // Use JUnit test framework
     testCompile 'junit:junit:4.12'

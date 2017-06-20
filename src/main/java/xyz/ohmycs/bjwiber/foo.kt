@@ -26,7 +26,7 @@ var name: String by Delegates.observable("NuLL") { property, oldValue, newValue 
 fun main(args: Array<String>) {
     val client = OkHttpClient()
     val a = Request.Builder().url(HttpUrl.parse("http://www.baidu.com/a/b/c?d=e&f=g"))
-    val resp = client.newCall(Request.Builder().url("http://127.0.0.1:22222/v3/users/1").post(
+    val resp = client.newCall(Request.Builder().url("http://127.0.0.1:22222/v3/users").post(
             MultipartBody.Builder().addFormDataPart("a", "b").addPart(MultipartBody.Part.createFormData("g", "h")).setType(MultipartBody.FORM).build()
     ).build()).execute()
     val json = Json.createReader(StringReader(resp.body()!!.string())).read() as JsonObject
