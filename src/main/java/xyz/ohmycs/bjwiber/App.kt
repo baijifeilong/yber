@@ -13,9 +13,7 @@ import javafx.scene.control.ComboBox
 import javafx.scene.control.Label
 import javafx.scene.control.ListView
 import javafx.scene.control.TextField
-import javafx.scene.layout.Background
-import javafx.scene.layout.HBox
-import javafx.scene.layout.Priority
+import javafx.scene.layout.*
 import javafx.scene.paint.Color
 import javafx.scene.web.WebView
 import netscape.javascript.JSObject
@@ -68,7 +66,7 @@ class MainController : Controller() {
     }
 
     init {
-        api.baseURI = "http://api.iguitar.me:2525/v3"
+        api.baseURI = "http://127.0.0.1:22222/v3"
     }
 }
 
@@ -79,26 +77,30 @@ class MainView : View() {
     var methodComboBox: ComboBox<String>? by singleAssign()
     var webView: WebView? by singleAssign()
     var statusLabel: Label? by singleAssign()
-    val arguments = (0 until 4).toMutableList().map { Argument() }.observable()
+    val arguments = mutableListOf(
+            Argument(key = "header", value = "HEADER", position = "header"),
+            Argument(key = "url", value = "URL", position = "url"),
+            Argument(key = "body", value = "BODY", position = "body")
+    ).observable()
     var argumentsListView: ListView<Argument> by singleAssign()
+    var bodyTypeComboBox: ComboBox<String>? by singleAssign()
     var client: OkHttpClient? by singleAssign()
 
     init {
-        client = OkHttpClient.Builder()
-                .addInterceptor { chain ->
-                    val request = chain.request()
-                    val body: RequestBody? = request.body()
-                    print("Request: ${request} ")
-                    if (body is FormBody) {
-                        print("Body: " + (0 until body.size()).map { "${body.name(it)}=${body.value(it)}" }.joinToString(","))
-                    } else {
-                        print("Body: " + body)
-                    }
-                    println()
-                    val response = chain.proceed(request)
-                    println("Response: ${response}")
-                    return@addInterceptor response
-                }.build()
+        client = OkHttpClient.Builder().addInterceptor { chain ->
+            val request = chain.request()
+            val body: RequestBody? = request.body()
+            print("Request: ${request} ")
+            if (body is FormBody) {
+                print("Body: " + (0 until body.size()).map { "${body.name(it)}=${body.value(it)}" }.joinToString(","))
+            } else {
+                print("Body: " + body)
+            }
+            println()
+            val response = chain.proceed(request)
+            println("Response: ${response}")
+            return@addInterceptor response
+        }.build()
     }
 
     fun renderCode(code: String) {
@@ -130,16 +132,16 @@ class MainView : View() {
                     argumentsListView.isVisible = !argumentsListView.isVisible
                 }
             }
-            combobox<String> {
+            bodyTypeComboBox = combobox<String> {
                 items = listOf("form", "multipart", "json").observable()
                 value = "form"
             }
             methodComboBox = combobox<String> {
-                items = listOf("get", "post", "patch", "delete", "put", "option").observable()
+                items = listOf("get", "post", "patch", "delete", "put").observable()
                 value = "get"
             }
             urlFirstField = textfield("http://127.0.0.1:22222/v3") { hgrow = Priority.ALWAYS }
-            urlSecondField = textfield("/users") { hgrow = Priority.ALWAYS }
+            urlSecondField = textfield("/test/echo") { hgrow = Priority.ALWAYS }
             button {
                 graphic = Glyph.create("FontAwesome|" + FontAwesome.Glyph.SEND).color(Color.BLUEVIOLET)
                 action {
@@ -153,22 +155,30 @@ class MainView : View() {
                         }.build()
                         val headerArguments = availableArguments.filter { it.position == "header" }
                         val bodyArguments = availableArguments.filter { it.position == "body" }
-                        val jsonArguments = availableArguments.filter { it.position == "json" }
-                        println("Request: $url")
-                        val api = mainController.api
+                        val body = when (bodyTypeComboBox!!.selectedItem!!) {
+                            "form" -> FormBody.Builder().apply {
+                                bodyArguments.forEach { this.add(it.key, it.value) }
+                            }.build()
+                            "multipart" -> if (bodyArguments.isNotEmpty()) MultipartBody.Builder().setType(MultipartBody.FORM).apply {
+                                bodyArguments.forEach { this.addFormDataPart(it.key, it.value) }
+                            }.build() else FormBody.Builder().build()
+                            "json" -> RequestBody.create(MediaType.parse("application/json"), Json.createObjectBuilder().apply {
+                                bodyArguments.forEach { this.add(it.key, it.value) }
+                            }.build().toString())
+                            else -> throw IllegalStateException()
+                        }
                         client!!.newCall(Request.Builder().url(url).apply {
+                            headerArguments.forEach { this.addHeader(it.key, it.value) }
                             when (methodComboBox!!.selectedItem!!) {
                                 "get" -> this.get()
-                                "post" -> this.post(FormBody.Builder().apply {
-                                    bodyArguments.forEach {
-                                        this.add(it.key, it.value)
-                                    }
-                                }.build())
+                                "post" -> this.post(body)
+                                "patch" -> this.patch(body)
+                                "delete" -> this.delete(body)
+                                "put" -> this.put(body)
                             }
                         }.build()).execute()
                     } ui {
                         if (it.body()?.contentType()?.subtype() == "json") {
-
                             val txt = it.body()?.string()
                             val code = Json.createReader(StringReader(txt)).read().toPrettyString()
                             renderCode(code)
@@ -203,8 +213,7 @@ class MainView : View() {
                             selectedProperty().bindBidirectional(it.enabledProperty)
                             textProperty().bind(selectedProperty().stringBinding { if (it == true) "Enabled" else "Disabled" })
                             action {
-                                println(it)
-                                a.isDisable = true
+                                this.parent.getChildList()!!.filter { it != this }.forEach { it.isDisable = !it.isDisable }
                             }
                         }
 
@@ -227,7 +236,7 @@ class MainView : View() {
                         val window: JSObject = engine.executeScript("window") as JSObject
                         window.setMember("java", JavaBridge())
                         engine.executeScript("window.console.log = function(message) { java.log(message) }")
-                        engine.executeScript("console.log('xxx')")
+                        engine.executeScript("console.log('I am a log from javascript console :)')")
                     }
                 }
                 val url = MainView::class.java.getResource("/index.html").toExternalForm()
@@ -246,8 +255,15 @@ class JavaBridge {
     }
 }
 
+class MainStyle : Stylesheet() {
+    init {
+        textField {
+            //            backgroundColor = MultiValue(arrayOf(Color(1.0, 1.0, 1.0, 0.8)))
+        }
+    }
+}
 
-class App : tornadofx.App(MainView::class) {
+class App : tornadofx.App(MainView::class, MainStyle::class) {
     init {
     }
 }
