@@ -113,7 +113,7 @@ class MainView : View() {
             button {
                 graphic = Glyph.create("FontAwesome|" + FontAwesome.Glyph.PLUS).color(Color.FORESTGREEN)
                 action {
-                    arguments.add(Argument())
+                    if (argumentsListView.isVisible) arguments.add(Argument()) else argumentsListView.isVisible = true
                 }
             }
             button {
@@ -130,16 +130,16 @@ class MainView : View() {
                     argumentsListView.isVisible = !argumentsListView.isVisible
                 }
             }
-            methodComboBox = combobox<String> {
-                items = listOf("get", "post", "patch", "delete", "put", "option").observable()
-                value = "post"
-            }
-            urlFirstField = textfield("http://127.0.0.1:22222/v3") { hgrow = Priority.ALWAYS }
-            urlSecondField = textfield("/") { hgrow = Priority.ALWAYS }
             combobox<String> {
                 items = listOf("form", "multipart", "json").observable()
                 value = "form"
             }
+            methodComboBox = combobox<String> {
+                items = listOf("get", "post", "patch", "delete", "put", "option").observable()
+                value = "get"
+            }
+            urlFirstField = textfield("http://127.0.0.1:22222/v3") { hgrow = Priority.ALWAYS }
+            urlSecondField = textfield("/users") { hgrow = Priority.ALWAYS }
             button {
                 graphic = Glyph.create("FontAwesome|" + FontAwesome.Glyph.SEND).color(Color.BLUEVIOLET)
                 action {
