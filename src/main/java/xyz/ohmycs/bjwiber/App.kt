@@ -148,13 +148,13 @@ class MainView : View() {
                     runAsync {
                         val availableArguments = arguments.filter { it.key != null && it.value != null && it.enabled }
                         val urlArguments = availableArguments.filter { it.position == "url" }
+                        val headerArguments = availableArguments.filter { it.position == "header" }
+                        val bodyArguments = availableArguments.filter { it.position == "body" }
                         val url = HttpUrl.parse(urlFirstField!!.text + urlSecondField!!.text)!!.newBuilder().apply {
                             urlArguments.forEach {
                                 this.addQueryParameter(it.key, it.value)
                             }
                         }.build()
-                        val headerArguments = availableArguments.filter { it.position == "header" }
-                        val bodyArguments = availableArguments.filter { it.position == "body" }
                         val body = when (bodyTypeComboBox!!.selectedItem!!) {
                             "form" -> FormBody.Builder().apply {
                                 bodyArguments.forEach { this.add(it.key, it.value) }
@@ -195,13 +195,24 @@ class MainView : View() {
                 managedProperty().bind(this.visibleProperty())
                 prefHeightProperty().bind(Bindings.size(items).multiply(50))
                 cellFormat {
+                    val currentArgument = it
                     graphic = hbox {
+                        fun updateTextColor() {
+                            this.children.forEach {
+                                it.style = "-fx-text-inner-color: ${when (currentArgument.position) {
+                                    "header" -> "red"
+                                    "url" -> "green"
+                                    else -> "blue"
+                                }};"
+                            }
+                        }
                         spacing = 3.0
                         combobox<String> {
                             items = listOf("header", "url", "body").observable()
                             bind(it.positionProperty)
+                            setOnAction { updateTextColor() }
                         }
-                        val a = textfield {
+                        textfield {
                             hgrow = Priority.SOMETIMES
                             bind(it.keyProperty)
                         }
@@ -211,7 +222,9 @@ class MainView : View() {
                         }
                         togglebutton {
                             selectedProperty().bindBidirectional(it.enabledProperty)
-                            textProperty().bind(selectedProperty().stringBinding { if (it == true) "Enabled" else "Disabled" })
+                            graphicProperty().bind(Bindings.`when`(it.enabledProperty)
+                                    .then(Glyph.create("FontAwesome|" + FontAwesome.Glyph.TOGGLE_ON).color(Color.GREEN))
+                                    .otherwise(Glyph.create("FontAwesome|" + FontAwesome.Glyph.TOGGLE_OFF).color(Color.GREEN)))
                             action {
                                 this.parent.getChildList()!!.filter { it != this }.forEach { it.isDisable = !it.isDisable }
                             }
@@ -222,6 +235,8 @@ class MainView : View() {
                                 arguments.remove(it)
                             }
                         }
+
+                        updateTextColor()
                     }
                 }
             }
