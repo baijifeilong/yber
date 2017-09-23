@@ -1,8 +1,8 @@
-# BjWiber
+# Yber
 
 > A HTTP GUI client powered by Java
 
-BjWiber is a HTTP GUI client that support flexible arguments adjustment
+Yber is an HTTP GUI client that support flexible arguments adjustment
 
 ## Snapshot
 
