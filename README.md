@@ -1,17 +1,19 @@
-# Yber [English Version](/)
+# Yber
 
-> 一个可以灵活调整参数的HTTP接口测试工具
+> A HTTP GUI client powered by Java
 
-## 用到的开发框架
+Yber is an HTTP GUI client that support flexible arguments adjustment
+
+## Used frameworks
 
 - JavaFX
 - TornadoFX
 - highlight.js
 
-## 截图
+## Snapshot
 
-![Snapshot](https://baijifeilong.github.io/images/20170924-yber-1.png)
+<img src="https://baijifeilong.github.io/images/20170924-yber-1.png" alt="Snapshot" width="500px"/>
 
-## 协议
+## License
 
 GPL-3.1
