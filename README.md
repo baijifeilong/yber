@@ -16,4 +16,4 @@ Yber is an HTTP GUI client that support flexible arguments adjustment
 
 ## License
 
-GPL-3.1
+GPL-3.0
