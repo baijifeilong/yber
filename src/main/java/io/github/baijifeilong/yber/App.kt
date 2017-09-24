@@ -1,4 +1,4 @@
-package xyz.ohmycs.bjwiber
+package io.github.baijifeilong.yber
 
 import javafx.application.Application
 import javafx.beans.binding.Bindings
@@ -84,6 +84,7 @@ class MainView : View() {
     var toggleArgumentsVisibleButton: Button? by singleAssign()
 
     init {
+        title = "YBer Interface Tester"
         client = OkHttpClient.Builder().addInterceptor { chain ->
             val request = chain.request()
             val body: RequestBody? = request.body()

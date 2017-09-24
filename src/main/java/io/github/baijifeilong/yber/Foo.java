@@ -1,4 +1,4 @@
-package xyz.ohmycs.bjwiber;
+package io.github.baijifeilong.yber;
 
 /**
  * Created by BaiJiFeiLong@gmail.com on 2017/6/16.

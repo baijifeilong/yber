@@ -1,4 +1,4 @@
-package xyz.ohmycs.bjwiber
+package io.github.baijifeilong.yber
 
 import okhttp3.*
 import tornadofx.*
