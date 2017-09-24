@@ -1,4 +1,4 @@
-# Yber
+# Yber [中文版](README-zh_CN.md)
 
 > A HTTP GUI client powered by Java
 
